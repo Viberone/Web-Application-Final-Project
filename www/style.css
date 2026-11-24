@@ -1,0 +1,49 @@
+body {
+	background-color: #f8f9fa;
+}
+
+.card .btn-delete-note,
+.card .btn-pin-note {
+	position: relative;
+	z-index: 2;
+}
+
+/* ---------- List view ---------- */
+.list-view .note-item {
+	flex: 0 0 100%;
+	max-width: 100%;
+}
+
+.list-view .card {
+	flex-direction: row;
+	align-items: center;
+}
+
+.list-view .card-body {
+	flex: 1 1 auto;
+	min-width: 0; /* lets the text shrink so the ellipsis works */
+}
+
+.list-view .card-text {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	margin-bottom: 0;
+}
+
+.list-view .card-footer {
+	border-top: 0;
+	background: transparent;
+	white-space: nowrap;
+}
+
+/* On phones the list rows stack vertically so nothing gets cramped */
+@media (max-width: 575.98px) {
+	.list-view .card {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	.list-view .card-footer {
+		white-space: normal;
+	}
+}
