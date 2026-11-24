@@ -105,7 +105,9 @@ require __DIR__ . '/includes/header.php';
                     <?php else: ?>
                         <a href="<?= e($url) ?>"><?= e($att['original_name']) ?></a>
                         <small class="text-muted">(<?= e(round($att['size'] / 1024)) ?> KB)</small>
-                    <?php endif; ?>
+                     <?php endif; ?>
+                    <button type="button" class="btn btn-sm btn-link text-danger btn-remove-attachment"
+                        data-attachment-id="<?= (int) $att['id'] ?>">Remove</button>
                 </div>
             <?php endforeach; ?>
         </div>

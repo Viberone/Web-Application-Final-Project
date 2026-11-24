@@ -342,6 +342,9 @@ $(document).on("change", "#attachment-input", function () {
 			$("<a></a>").attr("href", item.url).text(item.name).appendTo($row);
 			$row.append(" ").append($('<small class="text-muted"></small>').text("(" + Math.round(item.size / 1024) + " KB)"));
 		}
+		$('<button type="button" class="btn btn-sm btn-link text-danger btn-remove-attachment">Remove</button>')
+			.attr("data-attachment-id", item.id)
+			.appendTo($row);
 		$("#attachment-list").append($row);
 	}
 
@@ -380,4 +383,24 @@ $(document).on("change", "#attachment-input", function () {
 	}
 
 	uploadNext();
+});
+
+// ---------- Note page: remove an attachment ----------
+$(document).on("click", ".btn-remove-attachment", function () {
+	if (!window.confirm("Remove this attachment?")) return;
+
+	var $btn = $(this).prop("disabled", true);
+
+	$.post("/api/delete-attachment.php", { id: $btn.data("attachment-id") })
+		.done(function () {
+			$btn.closest(".attachment-item").remove();
+		})
+		.fail(function (xhr) {
+			if (xhr.status === 401) {
+				window.location.href = "/login.php";
+			} else {
+				alert("Could not remove the attachment. Please try again.");
+				$btn.prop("disabled", false);
+			}
+		});
 });
