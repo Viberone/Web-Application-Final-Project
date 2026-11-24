@@ -52,6 +52,8 @@ $(document).ready(function () {
 					$form.data("note-id", noteId); // the label checkboxes read the id from here
 					$(".note-label-check").prop("disabled", false);
 					$("#label-hint").addClass("d-none");
+					$("#attachment-input").prop("disabled", false);
+					$("#attachment-hint").addClass("d-none");
 				}
 				$status.text("Saved");
 			})
@@ -314,4 +316,68 @@ $(document).on("change", ".note-label-check", function () {
 		.always(function () {
 			$box.prop("disabled", false);
 		});
+});
+
+// ---------- Note page: attachments ----------
+$(document).on("change", "#attachment-input", function () {
+	var input = this;
+	var files = Array.prototype.slice.call(input.files);
+	var noteId = $("#note-form").data("note-id");
+	var $error = $("#attachment-error").addClass("d-none");
+
+	if (!noteId || files.length === 0) return;
+
+	$(input).prop("disabled", true);
+
+	// Builds the element for one uploaded file (text goes in with .text() so it can't inject HTML)
+	function addToPage(item) {
+		var $row = $('<div class="attachment-item mb-2"></div>');
+		if (item.kind === "image") {
+			var $link = $('<a target="_blank" rel="noopener"></a>').attr("href", item.url);
+			$('<img class="img-fluid attachment-img">').attr({ src: item.url, alt: item.name }).appendTo($link);
+			$row.append($link);
+		} else if (item.kind === "video") {
+			$('<video controls preload="metadata" class="attachment-video"></video>').attr("src", item.url).appendTo($row);
+		} else {
+			$("<a></a>").attr("href", item.url).text(item.name).appendTo($row);
+			$row.append(" ").append($('<small class="text-muted"></small>').text("(" + Math.round(item.size / 1024) + " KB)"));
+		}
+		$("#attachment-list").append($row);
+	}
+
+	// Upload the files one after another
+	function uploadNext() {
+		if (files.length === 0) {
+			input.value = "";
+			$(input).prop("disabled", false);
+			return;
+		}
+
+		var file = files.shift();
+		var formData = new FormData();
+		formData.append("note_id", noteId);
+		formData.append("file", file);
+
+		$.ajax({
+			url: "/api/upload-attachment.php",
+			type: "POST",
+			data: formData,
+			processData: false, // let the browser build the multipart body
+			contentType: false,
+		})
+			.done(function (res) {
+				addToPage(res);
+			})
+			.fail(function (xhr) {
+				if (xhr.status === 401) {
+					window.location.href = "/login.php";
+					return;
+				}
+				var message = (xhr.responseJSON && xhr.responseJSON.error) || "Upload failed. Please try again.";
+				$error.text(file.name + ": " + message).removeClass("d-none");
+			})
+			.always(uploadNext);
+	}
+
+	uploadNext();
 });

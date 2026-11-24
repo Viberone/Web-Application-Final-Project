@@ -36,6 +36,16 @@ if ($note['id']) {
     $attached_ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
 }
 
+// Attachments of this note
+$attachments = [];
+if ($note['id']) {
+    $stmt = $pdo->prepare('SELECT id, original_name, mime_type, size FROM attachments WHERE note_id = ? ORDER BY id');
+    $stmt->execute([$note['id']]);
+    $attachments = $stmt->fetchAll();
+}
+$image_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+$video_types = ['video/mp4', 'video/webm'];
+
 $page_title = $note['id'] ? 'Edit note' : 'New note';
 require __DIR__ . '/includes/header.php';
 ?>
@@ -79,6 +89,34 @@ require __DIR__ . '/includes/header.php';
                 Start writing first. Labels can be added once the note is saved.
             </p>
         <?php endif; ?>
+    </div>
+    <div class="mt-4" id="note-attachments">
+        <h6>Attachments</h6>
+        <div id="attachment-list">
+            <?php foreach ($attachments as $att): ?>
+                <?php $url = '/api/file.php?id=' . (int) $att['id']; ?>
+                <div class="attachment-item mb-2">
+                    <?php if (in_array($att['mime_type'], $image_types, true)): ?>
+                        <a href="<?= e($url) ?>" target="_blank" rel="noopener">
+                            <img src="<?= e($url) ?>" alt="<?= e($att['original_name']) ?>" class="img-fluid attachment-img">
+                        </a>
+                    <?php elseif (in_array($att['mime_type'], $video_types, true)): ?>
+                        <video controls preload="metadata" class="attachment-video" src="<?= e($url) ?>"></video>
+                    <?php else: ?>
+                        <a href="<?= e($url) ?>"><?= e($att['original_name']) ?></a>
+                        <small class="text-muted">(<?= e(round($att['size'] / 1024)) ?> KB)</small>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <label for="attachment-input" class="sr-only">Add attachments</label>
+        <input type="file" id="attachment-input" class="form-control-file" multiple
+            <?= $note['id'] ? '' : 'disabled' ?>>
+        <p id="attachment-hint" class="text-muted small mt-2 mb-0 <?= $note['id'] ? 'd-none' : '' ?>">
+            Start writing first. Attachments can be added once the note is saved.
+        </p>
+        <div id="attachment-error" class="text-danger small mt-2 d-none" role="alert"></div>
     </div>
 </form>
 
