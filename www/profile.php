@@ -134,6 +134,7 @@ require __DIR__ . '/includes/header.php';
             <?php endif; ?>
 
             <button type="submit" class="btn btn-primary btn-block">Save profile</button>
+            <p class="mt-3 text-center"><a href="/change-password.php">Change my password</a></p>
         </form>
     </div>
 </div>
