@@ -1,7 +1,17 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/preferences.php';
+
 if (!isset($page_title)) {
     $page_title = 'Notes';
+}
+
+// The user's preferences become CSS classes on <body>
+$body_classes = '';
+if (is_logged_in()) {
+    $prefs = get_preferences($pdo, $_SESSION['user_id']);
+    $body_classes = 'font-' . $prefs['font_size'] . ' note-' . $prefs['note_color'] . ' theme-' . $prefs['theme'];
 }
 ?>
 <!DOCTYPE html>
@@ -15,7 +25,7 @@ if (!isset($page_title)) {
     <link rel="stylesheet" href="/style.css">
 </head>
 
-<body>
+<body class="<?= e($body_classes) ?>">
     <nav class="navbar navbar-expand-md navbar-dark bg-primary">
         <a class="navbar-brand" href="/">Notes</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#mainNav"
@@ -27,6 +37,7 @@ if (!isset($page_title)) {
                 <?php if (is_logged_in()): ?>
                     <li class="nav-item"><a class="nav-link" href="/labels.php">Labels</a></li>
                     <li class="nav-item"><a class="nav-link" href="/profile.php">Profile</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/preferences.php">Preferences</a></li>
                     <li class="nav-item">
                         <span class="navbar-text mr-md-3"><?= e($_SESSION['display_name'] ?? '') ?></span>
                     </li>
