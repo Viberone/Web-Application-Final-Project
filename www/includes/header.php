@@ -26,6 +26,7 @@ if (!isset($page_title)) {
             <ul class="navbar-nav ml-auto">
                 <?php if (is_logged_in()): ?>
                     <li class="nav-item"><a class="nav-link" href="/labels.php">Labels</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/profile.php">Profile</a></li>
                     <li class="nav-item">
                         <span class="navbar-text mr-md-3"><?= e($_SESSION['display_name'] ?? '') ?></span>
                     </li>
