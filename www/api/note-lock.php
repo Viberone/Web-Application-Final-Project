@@ -33,6 +33,12 @@ if ($action === 'enable') {
         fail(409, 'This note already has a password.');
     }
 
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM note_shares WHERE note_id = ?');
+    $stmt->execute([$note_id]);
+    if ((int) $stmt->fetchColumn() > 0) {
+        fail(409, 'Stop sharing this note before locking it.');
+    }
+
     $password = $_POST['password'] ?? '';
     $confirm = $_POST['password_confirm'] ?? '';
     if (!is_string($password) || !is_string($confirm) || strlen($password) < 8) {

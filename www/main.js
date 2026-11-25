@@ -50,6 +50,7 @@ $(document).ready(function () {
 					history.replaceState(null, "", "/note.php?id=" + noteId);
 					$("#delete-btn").data("note-id", noteId).removeClass("d-none");
 					$("#lock-btn").removeClass("d-none");
+					$("#share-btn").removeClass("d-none");
 					$form.data("note-id", noteId); // the label checkboxes read the id from here
 					$(".note-label-check").prop("disabled", false);
 					$("#label-hint").addClass("d-none");
@@ -516,5 +517,120 @@ $(document).ready(function () {
 	$("#change-lock-modal, #disable-lock-modal").on("hidden.bs.modal", function () {
 		$(this).find("form")[0].reset();
 		$(this).find(".lock-form-error").addClass("d-none");
+	});
+});
+
+// ---------- Note page: share a note ----------
+$(document).ready(function () {
+	var $modal = $("#share-modal");
+	if ($modal.length === 0) return;
+
+	var $error = $("#share-error");
+	var $list = $("#share-list");
+
+	function noteId() {
+		return $("#note-form").data("note-id");
+	}
+
+	// Fills the list. All text goes in with .text(), so names can't inject HTML.
+	function render(shares) {
+		$list.empty();
+		$("#share-empty").toggleClass("d-none", shares.length > 0);
+
+		shares.forEach(function (s) {
+			var $li = $('<li class="list-group-item d-flex flex-wrap align-items-center share-row"></li>').attr("data-share-id", s.id);
+
+			var $who = $('<div class="flex-grow-1 mr-2"></div>');
+			$("<div></div>").text(s.display_name).appendTo($who);
+			$('<small class="text-muted"></small>').text(s.email).appendTo($who);
+
+			var $select = $('<select class="custom-select custom-select-sm share-permission w-auto mr-2"></select>')
+				.attr("aria-label", "Permission for " + s.email)
+				.append('<option value="read">Read only</option><option value="edit">Can edit</option>')
+				.val(s.permission);
+
+			var $revoke = $('<button type="button" class="btn btn-sm btn-outline-danger share-revoke">Revoke</button>');
+
+			$li.append($who, $select, $revoke).appendTo($list);
+		});
+	}
+
+	function loadList() {
+		$.post("/api/note-share.php", { action: "list", note_id: noteId() }).done(function (res) {
+			render(res.shares);
+		});
+	}
+
+	// Sends one action. On success the server returns the fresh list.
+	function call(data, onDone) {
+		$error.addClass("d-none");
+		data.note_id = noteId();
+		return $.post("/api/note-share.php", data)
+			.done(onDone)
+			.fail(function (xhr) {
+				if (xhr.status === 401) {
+					window.location.href = "/login.php";
+					return;
+				}
+				$error
+					.text((xhr.responseJSON && xhr.responseJSON.error) || "Something went wrong. Please try again.")
+					.removeClass("d-none");
+			});
+	}
+
+	$modal.on("show.bs.modal", function () {
+		$("#share-form")[0].reset();
+		$error.addClass("d-none");
+		loadList();
+	});
+
+	// Add a recipient
+	$("#share-form").on("submit", function (e) {
+		e.preventDefault();
+		var $btn = $(this).find("button[type=submit]").prop("disabled", true);
+
+		call(
+			{
+				action: "add",
+				email: $("#share-email").val(),
+				permission: $("#share-new-permission").val(),
+			},
+			function (res) {
+				$("#share-email").val("");
+				render(res.shares);
+			}
+		).always(function () {
+			$btn.prop("disabled", false);
+		});
+	});
+
+	// Change a recipient's permission
+	$list.on("change", ".share-permission", function () {
+		var $select = $(this);
+		call(
+			{
+				action: "update",
+				share_id: $select.closest(".share-row").data("share-id"),
+				permission: $select.val(),
+			},
+			function (res) {
+				render(res.shares);
+			}
+		).fail(loadList); // on failure, show what the server really has
+	});
+
+	// Revoke access
+	$list.on("click", ".share-revoke", function () {
+		if (!window.confirm("Stop sharing this note with this person?")) return;
+
+		call(
+			{
+				action: "revoke",
+				share_id: $(this).closest(".share-row").data("share-id"),
+			},
+			function (res) {
+				render(res.shares);
+			}
+		);
 	});
 });

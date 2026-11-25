@@ -107,6 +107,9 @@ require __DIR__ . '/includes/header.php';
             <button type="button" class="btn btn-sm btn-outline-secondary ml-1 mt-1 mt-sm-0"
                 data-toggle="modal" data-target="#disable-lock-modal">Remove password</button>
         <?php else: ?>
+            <button type="button" id="share-btn"
+                class="btn btn-sm btn-outline-secondary ml-2 mt-1 mt-sm-0 <?= $note['id'] ? '' : 'd-none' ?>"
+                data-toggle="modal" data-target="#share-modal">Share</button>
             <button type="button" id="lock-btn"
                 class="btn btn-sm btn-outline-secondary ml-2 <?= $note['id'] ? '' : 'd-none' ?>"
                 data-toggle="modal" data-target="#lock-modal">Lock</button>
@@ -264,6 +267,44 @@ require __DIR__ . '/includes/header.php';
                 <button type="submit" class="btn btn-danger">Remove password</button>
             </div>
         </form>
+    </div>
+</div>
+<?php endif; ?>
+<?php if ($note['lock_hash'] === null): ?>
+<div class="modal fade" id="share-modal" tabindex="-1" role="dialog" aria-labelledby="share-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="share-modal-title">Share this note</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="share-form" class="mb-3" novalidate>
+                    <label for="share-email">Email of a registered user</label>
+                    <div class="input-group">
+                        <input type="email" class="form-control" id="share-email" placeholder="name@example.com" required>
+                        <select class="custom-select" id="share-new-permission" aria-label="Permission" style="max-width: 9rem;">
+                            <option value="read">Read only</option>
+                            <option value="edit">Can edit</option>
+                        </select>
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary">Share</button>
+                        </div>
+                    </div>
+                </form>
+
+                <p id="share-error" class="text-danger small d-none" role="alert"></p>
+
+                <h6>People with access</h6>
+                <p id="share-empty" class="text-muted small">This note is not shared with anyone yet.</p>
+                <ul id="share-list" class="list-group"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
     </div>
 </div>
 <?php endif; ?>
