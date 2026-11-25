@@ -121,6 +121,12 @@ require __DIR__ . '/includes/header.php';
                     <div class="card h-100">
                         <div class="card-body">
                             <h5 class="card-title">
+                                <?php if ($note['pinned_at']): ?>
+                                    <span class="status-icon" role="img" aria-label="Pinned note">📌</span>
+                                <?php endif; ?>
+                                <?php if ($note['lock_hash'] !== null): ?>
+                                    <span class="status-icon" role="img" aria-label="Password-protected note">🔒</span>
+                                <?php endif; ?>
                                 <a href="/note.php?id=<?= (int) $note['id'] ?>" class="stretched-link text-dark">
                                     <?= e($note['title'] !== '' ? $note['title'] : 'Untitled') ?>
                                 </a>

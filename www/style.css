@@ -149,3 +149,9 @@ body.theme-dark .close { color: #fff; text-shadow: none; }
 body.theme-dark .btn-outline-secondary { color: #ced4da; border-color: #6c757d; }
 body.theme-dark .btn-outline-secondary:hover,
 body.theme-dark .btn-outline-secondary.active { color: #fff; }
+
+/* ---------- Note status icons ---------- */
+.status-icon {
+	font-size: 0.9em;
+	margin-right: 0.25rem;
+}
