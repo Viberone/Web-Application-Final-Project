@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/database.php';
+require_once __DIR__ . '/../includes/note-lock.php';
 
 if (!is_logged_in()) {
     http_response_code(401);
@@ -11,7 +12,7 @@ $id = (int) ($_GET['id'] ?? 0);
 
 // Join with notes so we can check that the note belongs to this user
 $stmt = $pdo->prepare(
-    'SELECT a.original_name, a.stored_name, a.mime_type, a.size
+    'SELECT a.original_name, a.stored_name, a.mime_type, a.size, a.note_id, n.lock_hash
      FROM attachments a
      JOIN notes n ON n.id = a.note_id
      WHERE a.id = ? AND n.user_id = ?'
@@ -22,6 +23,11 @@ $att = $stmt->fetch();
 $path = $att ? __DIR__ . '/../uploads/' . $att['stored_name'] : '';
 if (!$att || !is_file($path)) {
     http_response_code(404);
+    exit;
+}
+
+if (!note_is_unlocked($att['note_id'], $att['lock_hash'])) {
+    http_response_code(403);
     exit;
 }
 

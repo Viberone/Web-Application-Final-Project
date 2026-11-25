@@ -49,6 +49,7 @@ $(document).ready(function () {
 					// the URL now points to the note we just created
 					history.replaceState(null, "", "/note.php?id=" + noteId);
 					$("#delete-btn").data("note-id", noteId).removeClass("d-none");
+					$("#lock-btn").removeClass("d-none");
 					$form.data("note-id", noteId); // the label checkboxes read the id from here
 					$(".note-label-check").prop("disabled", false);
 					$("#label-hint").addClass("d-none");
@@ -403,4 +404,50 @@ $(document).on("click", ".btn-remove-attachment", function () {
 				$btn.prop("disabled", false);
 			}
 		});
+});
+
+// ---------- Locked note: unlock dialog ----------
+$(document).ready(function () {
+	var $unlock = $("#unlock-modal");
+	if ($unlock.length === 0) return;
+
+	// "static" backdrop and no Esc key: the dialog can only be left with Cancel or Unlock
+	$unlock.modal({ backdrop: "static", keyboard: false });
+	$unlock.on("shown.bs.modal", function () {
+		$("#note_password").trigger("focus");
+	});
+});
+
+// ---------- Note page: lock a note with a password ----------
+$(document).ready(function () {
+	var $lockForm = $("#lock-form");
+	if ($lockForm.length === 0) return;
+
+	var $error = $("#lock-error");
+
+	$lockForm.on("submit", function (e) {
+		e.preventDefault();
+		var $btn = $lockForm.find("button[type=submit]").prop("disabled", true);
+		$error.addClass("d-none");
+
+		$.post("/api/note-lock.php", {
+			action: "enable",
+			note_id: $("#note-form").data("note-id"),
+			password: $("#lock-password").val(),
+			password_confirm: $("#lock-password-confirm").val(),
+		})
+			.done(function () {
+				window.location.reload(); // the page now shows the "Locked" badge
+			})
+			.fail(function (xhr) {
+				if (xhr.status === 401) {
+					window.location.href = "/login.php";
+					return;
+				}
+				$error
+					.text((xhr.responseJSON && xhr.responseJSON.error) || "Something went wrong. Please try again.")
+					.removeClass("d-none");
+				$btn.prop("disabled", false);
+			});
+	});
 });

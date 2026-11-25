@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/database.php';
+require_once __DIR__ . '/../includes/note-lock.php';
 
 header('Content-Type: application/json');
 
@@ -22,12 +23,17 @@ $content = $_POST['content'] ?? '';
 $user_id = $_SESSION['user_id'];
 
 if ($id > 0) {
-    // Update: make sure the note exists AND belongs to this user
-    $stmt = $pdo->prepare('SELECT id FROM notes WHERE id = ? AND user_id = ?');
+    $stmt = $pdo->prepare('SELECT id, lock_hash FROM notes WHERE id = ? AND user_id = ?');
     $stmt->execute([$id, $user_id]);
-    if (!$stmt->fetch()) {
+    $existing = $stmt->fetch();
+    if (!$existing) {
         http_response_code(404);
         echo json_encode(['error' => 'Note not found']);
+        exit;
+    }
+    if (!note_is_unlocked($id, $existing['lock_hash'])) {
+        http_response_code(403);
+        echo json_encode(['error' => 'This note is locked.']);
         exit;
     }
 

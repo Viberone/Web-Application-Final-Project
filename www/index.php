@@ -17,13 +17,15 @@ if (is_string($_GET['labels'] ?? null) && $_GET['labels'] !== '') {
 
 $filtering = ($q !== '' || $label_ids);
 
-$sql = 'SELECT id, title, content, updated_at, pinned_at FROM notes WHERE user_id = ?';
+$sql = 'SELECT id, title, content, updated_at, pinned_at, lock_hash FROM notes WHERE user_id = ?';
 $params = [$user_id];
 
 if ($q !== '') {
     // Escape \ % _ so the user's text is matched literally, then wrap in %...%
     $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
-    $sql .= ' AND (title LIKE ? OR content LIKE ?)';
+    
+    // Locked notes are searched by title only, otherwise search results would leak their content
+    $sql .= ' AND (title LIKE ? OR (lock_hash IS NULL AND content LIKE ?))';
     $params[] = $like;
     $params[] = $like;
 }
@@ -123,7 +125,11 @@ require __DIR__ . '/includes/header.php';
                                     <?= e($note['title'] !== '' ? $note['title'] : 'Untitled') ?>
                                 </a>
                             </h5>
-                            <p class="card-text"><?= e(mb_substr($note['content'] ?? '', 0, 150)) ?></p>
+                            <?php if ($note['lock_hash'] !== null): ?>
+                                <p class="card-text text-muted font-italic">This note is locked.</p>
+                            <?php else: ?>
+                                <p class="card-text"><?= e(mb_substr($note['content'] ?? '', 0, 150)) ?></p>
+                            <?php endif; ?>
                             <?php if (!empty($note_labels[$note['id']])): ?>
                                 <div class="mt-2">
                                     <?php foreach ($note_labels[$note['id']] as $label_name): ?>

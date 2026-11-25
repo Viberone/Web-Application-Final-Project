@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/database.php';
+require_once __DIR__ . '/../includes/note-lock.php';
 
 header('Content-Type: application/json');
 
@@ -20,11 +21,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $user_id = $_SESSION['user_id'];
 $note_id = (int) ($_POST['note_id'] ?? 0);
 
-// The note must belong to this user
-$stmt = $pdo->prepare('SELECT id FROM notes WHERE id = ? AND user_id = ?');
+$stmt = $pdo->prepare('SELECT id, lock_hash FROM notes WHERE id = ? AND user_id = ?');
 $stmt->execute([$note_id, $user_id]);
-if (!$stmt->fetch()) {
+$note = $stmt->fetch();
+if (!$note) {
     fail(404, 'Note not found');
+}
+if (!note_is_unlocked($note_id, $note['lock_hash'])) {
+    fail(403, 'This note is locked.');
 }
 
 if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {

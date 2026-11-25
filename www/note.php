@@ -2,13 +2,15 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/database.php';
 
+require_once __DIR__ . '/includes/note-lock.php';
+
 require_login();
 
-$note = ['id' => 0, 'title' => '', 'content' => ''];
+$note = ['id' => 0, 'title' => '', 'content' => '', 'lock_hash' => null];
 
 // Editing an existing note? Load it, but only if it belongs to this user.
 if (isset($_GET['id'])) {
-    $stmt = $pdo->prepare('SELECT id, title, content FROM notes WHERE id = ? AND user_id = ?');
+    $stmt = $pdo->prepare('SELECT id, title, content, lock_hash FROM notes WHERE id = ? AND user_id = ?');
     $stmt->execute([(int) $_GET['id'], $_SESSION['user_id']]);
     $found = $stmt->fetch();
 
@@ -22,6 +24,50 @@ if (isset($_GET['id'])) {
         exit;
     }
     $note = $found;
+
+    // Locked note: nothing is shown until the password is entered
+    if (!note_is_unlocked($note['id'], $note['lock_hash'])) {
+        $unlock_error = '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $typed = $_POST['note_password'] ?? '';
+            if (is_string($typed) && password_verify($typed, $note['lock_hash'])) {
+                $_SESSION['unlocked_notes'][(int) $note['id']] = true;
+                header('Location: /note.php?id=' . (int) $note['id']);
+                exit;
+            }
+            $unlock_error = 'Incorrect password.';
+        }
+
+        $page_title = 'Locked note';
+        require __DIR__ . '/includes/header.php';
+        ?>
+        <div class="modal fade" id="unlock-modal" tabindex="-1" role="dialog" aria-labelledby="unlock-title" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <form method="post" action="/note.php?id=<?= (int) $note['id'] ?>" class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="unlock-title">This note is locked</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p>Enter the password to open "<?= e($note['title'] !== '' ? $note['title'] : 'Untitled') ?>".</p>
+                        <div class="form-group mb-0">
+                            <label for="note_password" class="sr-only">Password</label>
+                            <input type="password" id="note_password" name="note_password" autocomplete="off" required
+                                class="form-control <?= $unlock_error !== '' ? 'is-invalid' : '' ?>">
+                            <div class="invalid-feedback"><?= e($unlock_error) ?></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="/" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Unlock</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <?php
+        require __DIR__ . '/includes/footer.php';
+        exit;
+    }
 }
 
 // All labels of this user, and which of them are on this note
@@ -54,6 +100,13 @@ require __DIR__ . '/includes/header.php';
     <a href="/">&larr; Back to my notes</a>
     <div>
         <span id="save-status" class="text-muted small" aria-live="polite"><?= $note['id'] ? 'Saved' : '' ?></span>
+        <?php if ($note['lock_hash'] !== null): ?>
+            <span class="badge badge-warning ml-2">Locked</span>
+        <?php else: ?>
+            <button type="button" id="lock-btn"
+                class="btn btn-sm btn-outline-secondary ml-2 <?= $note['id'] ? '' : 'd-none' ?>"
+                data-toggle="modal" data-target="#lock-modal">Lock</button>
+        <?php endif; ?>
         <button type="button" id="delete-btn"
             class="btn btn-sm btn-outline-danger ml-2 btn-delete-note <?= $note['id'] ? '' : 'd-none' ?>"
             data-note-id="<?= (int) $note['id'] ?>">Delete</button>
@@ -122,5 +175,35 @@ require __DIR__ . '/includes/header.php';
     </div>
 </form>
 
+<?php if ($note['lock_hash'] === null): ?>
+<div class="modal fade" id="lock-modal" tabindex="-1" role="dialog" aria-labelledby="lock-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <form id="lock-form" class="modal-content" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="lock-modal-title">Lock this note</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">Choose a password for this note. You will need it to open, edit or delete the note. If you forget it, it cannot be recovered.</p>
+                <div class="form-group">
+                    <label for="lock-password">Password</label>
+                    <input type="password" class="form-control" id="lock-password" autocomplete="new-password" required>
+                </div>
+                <div class="form-group mb-0">
+                    <label for="lock-password-confirm">Confirm password</label>
+                    <input type="password" class="form-control" id="lock-password-confirm" autocomplete="new-password" required>
+                </div>
+                <p id="lock-error" class="text-danger small mt-2 mb-0 d-none" role="alert"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Lock note</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
 <?php require __DIR__ . '/includes/delete-modal.php'; ?>
 <?php require __DIR__ . '/includes/footer.php'; ?>
