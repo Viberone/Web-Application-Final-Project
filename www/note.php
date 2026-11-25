@@ -96,12 +96,16 @@ $page_title = $note['id'] ? 'Edit note' : 'New note';
 require __DIR__ . '/includes/header.php';
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
     <a href="/">&larr; Back to my notes</a>
     <div>
         <span id="save-status" class="text-muted small" aria-live="polite"><?= $note['id'] ? 'Saved' : '' ?></span>
         <?php if ($note['lock_hash'] !== null): ?>
             <span class="badge badge-warning ml-2">Locked</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary ml-2 mt-1 mt-sm-0"
+                data-toggle="modal" data-target="#change-lock-modal">Change password</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary ml-1 mt-1 mt-sm-0"
+                data-toggle="modal" data-target="#disable-lock-modal">Remove password</button>
         <?php else: ?>
             <button type="button" id="lock-btn"
                 class="btn btn-sm btn-outline-secondary ml-2 <?= $note['id'] ? '' : 'd-none' ?>"
@@ -109,7 +113,8 @@ require __DIR__ . '/includes/header.php';
         <?php endif; ?>
         <button type="button" id="delete-btn"
             class="btn btn-sm btn-outline-danger ml-2 btn-delete-note <?= $note['id'] ? '' : 'd-none' ?>"
-            data-note-id="<?= (int) $note['id'] ?>">Delete</button>
+            data-note-id="<?= (int) $note['id'] ?>"
+            data-locked="<?= $note['lock_hash'] !== null ? 1 : 0 ?>">Delete</button>
     </div>
 </div>
 
@@ -200,6 +205,63 @@ require __DIR__ . '/includes/header.php';
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-primary">Lock note</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php else: ?>
+<div class="modal fade" id="change-lock-modal" tabindex="-1" role="dialog" aria-labelledby="change-lock-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <form id="change-lock-form" class="modal-content" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="change-lock-title">Change note password</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="change-current">Current password</label>
+                    <input type="password" class="form-control" id="change-current" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label for="change-new">New password</label>
+                    <input type="password" class="form-control" id="change-new" autocomplete="new-password" required>
+                </div>
+                <div class="form-group mb-0">
+                    <label for="change-confirm">Confirm new password</label>
+                    <input type="password" class="form-control" id="change-confirm" autocomplete="new-password" required>
+                </div>
+                <p class="text-danger small mt-2 mb-0 d-none lock-form-error" role="alert"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Change password</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="disable-lock-modal" tabindex="-1" role="dialog" aria-labelledby="disable-lock-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <form id="disable-lock-form" class="modal-content" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="disable-lock-title">Remove note password</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">The note will no longer be protected. Enter the current password to confirm.</p>
+                <div class="form-group mb-0">
+                    <label for="disable-current">Current password</label>
+                    <input type="password" class="form-control" id="disable-current" autocomplete="off" required>
+                </div>
+                <p class="text-danger small mt-2 mb-0 d-none lock-form-error" role="alert"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">Remove password</button>
             </div>
         </form>
     </div>

@@ -82,6 +82,7 @@ $(document).ready(function () {
 	});
 });
 
+// ---------- Delete note (confirmation dialog) ----------
 $(document).ready(function () {
 	var $modal = $("#delete-modal");
 	if ($modal.length === 0) return;
@@ -91,24 +92,41 @@ $(document).ready(function () {
 	// Works for the buttons on the homepage cards and on the note page
 	$(document).on("click", ".btn-delete-note", function () {
 		deleteId = $(this).data("note-id");
+		var locked = Number($(this).attr("data-locked")) === 1;
+
 		$("#delete-error").addClass("d-none");
+		$("#delete-password").val("");
+		$("#delete-password-group").toggleClass("d-none", !locked); // password box only for locked notes
 		$modal.modal("show");
+	});
+
+	$modal.on("shown.bs.modal", function () {
+		$("#delete-password:visible").trigger("focus");
+	});
+
+	// Pressing Enter in the password box confirms
+	$("#delete-password").on("keydown", function (e) {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			$("#confirm-delete").click();
+		}
 	});
 
 	$("#confirm-delete").on("click", function () {
 		var $btn = $(this).prop("disabled", true);
 
-		$.post("/api/delete-note.php", { id: deleteId })
+		$.post("/api/delete-note.php", { id: deleteId, password: $("#delete-password").val() })
 			.done(function () {
 				window.location.href = "/";
 			})
 			.fail(function (xhr) {
 				if (xhr.status === 401) {
 					window.location.href = "/login.php";
-				} else {
-					$("#delete-error").removeClass("d-none");
-					$btn.prop("disabled", false);
+					return;
 				}
+				var message = (xhr.responseJSON && xhr.responseJSON.error) || "Could not delete the note. Please try again.";
+				$("#delete-error").text(message).removeClass("d-none");
+				$btn.prop("disabled", false);
 			});
 	});
 });
@@ -449,5 +467,54 @@ $(document).ready(function () {
 					.removeClass("d-none");
 				$btn.prop("disabled", false);
 			});
+	});
+});
+
+// ---------- Note page: change / remove a note password ----------
+$(document).ready(function () {
+	function sendLockForm($form, data) {
+		var $btn = $form.find("button[type=submit]").prop("disabled", true);
+		var $error = $form.find(".lock-form-error").addClass("d-none");
+
+		data.note_id = $("#note-form").data("note-id");
+
+		$.post("/api/note-lock.php", data)
+			.done(function () {
+				window.location.reload();
+			})
+			.fail(function (xhr) {
+				if (xhr.status === 401) {
+					window.location.href = "/login.php";
+					return;
+				}
+				$error
+					.text((xhr.responseJSON && xhr.responseJSON.error) || "Something went wrong. Please try again.")
+					.removeClass("d-none");
+				$btn.prop("disabled", false);
+			});
+	}
+
+	$("#change-lock-form").on("submit", function (e) {
+		e.preventDefault();
+		sendLockForm($(this), {
+			action: "change",
+			current_password: $("#change-current").val(),
+			password: $("#change-new").val(),
+			password_confirm: $("#change-confirm").val(),
+		});
+	});
+
+	$("#disable-lock-form").on("submit", function (e) {
+		e.preventDefault();
+		sendLockForm($(this), {
+			action: "disable",
+			current_password: $("#disable-current").val(),
+		});
+	});
+
+	// Clear the fields and any error when a dialog is closed
+	$("#change-lock-modal, #disable-lock-modal").on("hidden.bs.modal", function () {
+		$(this).find("form")[0].reset();
+		$(this).find(".lock-form-error").addClass("d-none");
 	});
 });

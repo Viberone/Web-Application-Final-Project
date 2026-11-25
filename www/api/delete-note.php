@@ -19,25 +19,33 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $id = (int) ($_POST['id'] ?? 0);
 $user_id = $_SESSION['user_id'];
 
-// Get the stored file names first: the attachment rows disappear with the note (CASCADE)
-$stmt = $pdo->prepare(
-    'SELECT a.stored_name
-     FROM attachments a
-     JOIN notes n ON n.id = a.note_id
-     WHERE n.id = ? AND n.user_id = ?'
-);
+$stmt = $pdo->prepare('SELECT lock_hash FROM notes WHERE id = ? AND user_id = ?');
 $stmt->execute([$id, $user_id]);
-$files = $stmt->fetchAll(PDO::FETCH_COLUMN);
+$note = $stmt->fetch();
 
-// The user_id condition makes sure you can only delete your own notes
-$stmt = $pdo->prepare('DELETE FROM notes WHERE id = ? AND user_id = ?');
-$stmt->execute([$id, $user_id]);
-
-if ($stmt->rowCount() === 0) {
+if (!$note) {
     http_response_code(404);
     echo json_encode(['error' => 'Note not found']);
     exit;
 }
+
+// A locked note needs its password for deletion, every time
+if ($note['lock_hash'] !== null) {
+    $password = $_POST['password'] ?? '';
+    if (!is_string($password) || $password === '' || !password_verify($password, $note['lock_hash'])) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Incorrect password.']);
+        exit;
+    }
+}
+
+// Get the stored file names first: the attachment rows disappear with the note (CASCADE)
+$stmt = $pdo->prepare('SELECT stored_name FROM attachments WHERE note_id = ?');
+$stmt->execute([$id]);
+$files = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+$stmt = $pdo->prepare('DELETE FROM notes WHERE id = ? AND user_id = ?');
+$stmt->execute([$id, $user_id]);
 
 // The note is gone, now remove its files from disk
 foreach ($files as $stored_name) {
@@ -46,5 +54,7 @@ foreach ($files as $stored_name) {
         unlink($path);
     }
 }
+
+unset($_SESSION['unlocked_notes'][$id]);
 
 echo json_encode(['deleted' => true]);

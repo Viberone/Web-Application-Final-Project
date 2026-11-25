@@ -145,7 +145,8 @@ require __DIR__ . '/includes/header.php';
                                     data-note-id="<?= (int) $note['id'] ?>"
                                     data-pinned="<?= $note['pinned_at'] ? 1 : 0 ?>"><?= $note['pinned_at'] ? 'Unpin' : 'Pin' ?></button>
                                 <button type="button" class="btn btn-sm btn-outline-danger btn-delete-note"
-                                    data-note-id="<?= (int) $note['id'] ?>">Delete</button>
+                                    data-note-id="<?= (int) $note['id'] ?>"
+                                    data-locked="<?= $note['lock_hash'] !== null ? 1 : 0 ?>">Delete</button>
                             </div>
                         </div>
                     </div>

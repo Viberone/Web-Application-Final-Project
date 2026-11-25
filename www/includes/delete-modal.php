@@ -9,7 +9,11 @@
             </div>
             <div class="modal-body">
                 <p class="mb-0">Are you sure you want to delete this note? This cannot be undone.</p>
-                <p class="text-danger mb-0 mt-2 d-none" id="delete-error">Could not delete the note. Please try again.</p>
+                <div class="form-group mt-3 mb-0 d-none" id="delete-password-group">
+                    <label for="delete-password">This note is locked. Enter its password to delete it.</label>
+                    <input type="password" class="form-control" id="delete-password" autocomplete="off">
+                </div>
+                <p class="text-danger mb-0 mt-2 d-none" id="delete-error" role="alert"></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>

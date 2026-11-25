@@ -50,6 +50,44 @@ if ($action === 'enable') {
     $_SESSION['unlocked_notes'][$note_id] = true;
 
     echo json_encode(['locked' => true]);
+
+} elseif ($action === 'change' || $action === 'disable') {
+    if ($note['lock_hash'] === null) {
+        fail(409, 'This note has no password.');
+    }
+
+    // Both actions need the current password
+    $current = $_POST['current_password'] ?? '';
+    if (!is_string($current) || $current === '' || !password_verify($current, $note['lock_hash'])) {
+        fail(403, 'Current password is incorrect.');
+    }
+
+    if ($action === 'change') {
+        $password = $_POST['password'] ?? '';
+        $confirm = $_POST['password_confirm'] ?? '';
+        if (!is_string($password) || !is_string($confirm) || strlen($password) < 8) {
+            fail(422, 'New password must be at least 8 characters.');
+        }
+        if ($password !== $confirm) {
+            fail(422, 'The two new passwords do not match.');
+        }
+        if ($password === $current) {
+            fail(422, 'The new password must be different from the current one.');
+        }
+
+        $stmt = $pdo->prepare('UPDATE notes SET lock_hash = ?, updated_at = updated_at WHERE id = ? AND user_id = ?');
+        $stmt->execute([password_hash($password, PASSWORD_BCRYPT), $note_id, $user_id]);
+
+        echo json_encode(['changed' => true]);
+    } else {
+        $stmt = $pdo->prepare('UPDATE notes SET lock_hash = NULL, updated_at = updated_at WHERE id = ? AND user_id = ?');
+        $stmt->execute([$note_id, $user_id]);
+
+        unset($_SESSION['unlocked_notes'][$note_id]); // nothing to remember any more
+
+        echo json_encode(['locked' => false]);
+    }
+
 } else {
     fail(400, 'Unknown action.');
 }
